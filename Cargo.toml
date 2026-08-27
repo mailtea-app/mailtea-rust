@@ -1,0 +1,45 @@
+[package]
+name = "mailtea"
+# The one place the version lives. `scripts/sync-oss-repos.sh` reads it from
+# here to tag the mirror, and `mailtea::VERSION` reads it via CARGO_PKG_VERSION.
+version = "0.1.0"
+edition = "2021"
+rust-version = "1.75"
+description = "The official Rust SDK for Mailtea — send, schedule, and manage email from your app or AI agent."
+documentation = "https://docs.rs/mailtea"
+homepage = "https://mailtea.app"
+repository = "https://github.com/mailtea-app/mailtea-rust"
+license = "MIT"
+readme = "README.md"
+keywords = ["mailtea", "email", "smtp", "transactional", "newsletter"]
+categories = ["api-bindings", "email"]
+exclude = [".github/"]
+
+[dependencies]
+# The HTTP client. TLS is pinned to rustls rather than left to reqwest's
+# default, so a fresh Linux box needs no system OpenSSL and the backend cannot
+# change under you. `charset` is what `Response::text()` is gated on.
+reqwest = { version = "0.12", default-features = false, features = [
+    "rustls-tls",
+    "http2",
+    "charset",
+] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+# Webhook signature verification. Python's SDK is zero-dependency because
+# `hmac`/`hashlib`/`base64` are in its standard library; Rust's is not, so these
+# three take their place. They are the RustCrypto implementations — `hmac`'s
+# `verify_slice` is the constant-time compare.
+hmac = "0.12"
+sha2 = "0.10"
+base64 = "0.22"
+
+[dev-dependencies]
+# The tests serve their own mock Mailtea over a tokio TcpListener, so they add
+# no HTTP framework and make no network calls.
+tokio = { version = "1", features = [
+    "macros",
+    "rt-multi-thread",
+    "net",
+    "io-util",
+] }

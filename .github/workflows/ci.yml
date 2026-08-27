@@ -1,0 +1,19 @@
+name: CI
+on:
+  push:
+    branches: [main]
+  pull_request:
+  # Lets a run be re-triggered from the Actions tab without a new commit.
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: clippy, rustfmt
+      # No credentials and no network: the suite serves its own mock Mailtea.
+      - run: cargo test
+      - run: cargo clippy --all-targets -- -D warnings
+      - run: cargo fmt --check
