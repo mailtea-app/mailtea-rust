@@ -18,6 +18,12 @@ mailtea = "0.1"
 tokio = { version = "1", features = ["macros", "rt-multi-thread"] }
 ```
 
+Until the crate is on crates.io, depend on the repository:
+
+```toml
+mailtea = { git = "https://github.com/mailtea-app/mailtea-rust", tag = "v0.1.0" }
+```
+
 ## Usage
 
 ```rust
