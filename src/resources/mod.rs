@@ -25,7 +25,7 @@ pub use automation_runs::AutomationRuns;
 pub use automations::Automations;
 pub use contact_properties::ContactProperties;
 pub use contacts::{Contacts, CreateContact, UpdateContact};
-pub use domains::{Domains, TrackingDomains};
+pub use domains::{DomainClaims, Domains, TrackingDomains};
 pub use emails::{Attachment, BatchSent, Email, Emails, SendEmail, SentEmail, Tag, TemplateRef};
 pub use events::{EventDefinitions, Events};
 pub use inbound::{InboundAttachments, InboundEmails};

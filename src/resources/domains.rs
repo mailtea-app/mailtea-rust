@@ -13,17 +13,24 @@ use crate::params;
 /// Scoped to a publication — pass `publication_id`. Register a domain, add the
 /// returned DNS `records`, then [`verify`](Domains::verify) it before sending
 /// from it.
+///
+/// [`create`](Domains::create) takes `region` (fixed at creation), `tls` and
+/// `tracking_subdomain`; [`list`](Domains::list) filters on `region` and
+/// `status`.
 #[derive(Clone, Debug)]
 pub struct Domains {
     inner: Arc<Inner>,
     /// Tracking sub-domains (CNAME) under a domain.
     pub tracking: TrackingDomains,
+    /// Domain claims — take a domain back from another publication.
+    pub claims: DomainClaims,
 }
 
 impl Domains {
     pub(crate) fn new(inner: Arc<Inner>) -> Self {
         Self {
             tracking: TrackingDomains::new(Arc::clone(&inner)),
+            claims: DomainClaims::new(Arc::clone(&inner)),
             inner,
         }
     }
@@ -82,6 +89,16 @@ impl Domains {
     /// `custom_return_path` (delegate a subdomain as the envelope sender so SPF
     /// aligns with your own domain). `publication_id` rides in both the query
     /// and the body.
+    ///
+    /// `"tracking_subdomain": null` removes a tracking subdomain: the domain's
+    /// links go back to being served from the Mailtea host, and links in mail
+    /// already sent point at the old hostname and stop resolving. The payload
+    /// is serialized as given, so the null reaches the wire — omitting the key
+    /// (leave the subdomain alone) and passing null (remove it) are different
+    /// requests, and a params type that skips its `None`s would send neither.
+    /// An empty string is not a third spelling; it is refused with
+    /// `tracking_subdomain_invalid`. null is an update-only value: a create has
+    /// nothing to clear.
     pub async fn update(&self, id: &str, params: impl Serialize) -> Result<Value> {
         let payload = crate::params::to_value(params)?;
         self.inner
@@ -201,6 +218,85 @@ impl TrackingDomains {
                     "/v1/domains/{}/tracking-domains/{}{}",
                     crate::params::encode(domain_id),
                     crate::params::encode(tracking_domain_id),
+                    crate::params::query(params)?
+                ),
+                None,
+            )
+            .await
+    }
+}
+
+/// Domain claims — take a domain back from whichever publication currently
+/// holds it. Reached through [`Mailtea::domains`](crate::Mailtea::domains)`.claims`.
+///
+/// Use this when adding a domain is refused because the host is connected to
+/// another publication: open a claim, publish the TXT record the response lists
+/// to prove you control the DNS, then [`verify`](DomainClaims::verify). On
+/// success the other team's domain is released and a fresh one is created for
+/// you.
+#[derive(Clone, Debug)]
+pub struct DomainClaims {
+    inner: Arc<Inner>,
+}
+
+impl DomainClaims {
+    pub(crate) fn new(inner: Arc<Inner>) -> Self {
+        Self { inner }
+    }
+
+    /// `POST /v1/domains/claim` — open a claim. Takes `publication_id`, `name`
+    /// and an optional `region`; the response `records` lists the TXT record to
+    /// publish.
+    pub async fn create(&self, params: impl Serialize) -> Result<Value> {
+        self.inner
+            .call("POST", "/v1/domains/claim", crate::params::to_body(params)?)
+            .await
+    }
+
+    /// `GET /v1/domains/claims/:id` — poll a claim. Requires `publication_id`.
+    pub async fn get(&self, id: &str, params: impl Serialize) -> Result<Value> {
+        self.inner
+            .call(
+                "GET",
+                &format!(
+                    "/v1/domains/claims/{}{}",
+                    crate::params::encode(id),
+                    crate::params::query(params)?
+                ),
+                None,
+            )
+            .await
+    }
+
+    /// `POST /v1/domains/claims/:id/verify` — check the TXT record and complete
+    /// the claim if it is there.
+    ///
+    /// Safe to call repeatedly: a record that has not propagated yet leaves the
+    /// claim pending with the same record, so nothing has to be republished. A
+    /// completed claim answers with the fresh `domain` beside the claim.
+    pub async fn verify(&self, id: &str, params: impl Serialize) -> Result<Value> {
+        self.inner
+            .call(
+                "POST",
+                &format!(
+                    "/v1/domains/claims/{}/verify{}",
+                    crate::params::encode(id),
+                    crate::params::query(params)?
+                ),
+                None,
+            )
+            .await
+    }
+
+    /// `DELETE /v1/domains/claims/:id` — withdraw a pending claim. Requires
+    /// `publication_id`.
+    pub async fn cancel(&self, id: &str, params: impl Serialize) -> Result<Value> {
+        self.inner
+            .call(
+                "DELETE",
+                &format!(
+                    "/v1/domains/claims/{}{}",
+                    crate::params::encode(id),
                     crate::params::query(params)?
                 ),
                 None,

@@ -20,7 +20,7 @@ use std::collections::BTreeSet;
 use std::fs;
 use std::path::Path;
 
-/// The 35 path prefixes the Python SDK reaches. See the module comment.
+/// The 37 path prefixes the Python SDK reaches. See the module comment.
 const PYTHON_ENDPOINTS: &[&str] = &[
     "/v1/api-keys",
     "/v1/api-keys/",
@@ -35,6 +35,8 @@ const PYTHON_ENDPOINTS: &[&str] = &[
     "/v1/contacts/",
     "/v1/domains",
     "/v1/domains/",
+    "/v1/domains/claim",
+    "/v1/domains/claims/",
     "/v1/emails",
     "/v1/emails/",
     "/v1/emails/analytics",
@@ -79,8 +81,8 @@ fn every_python_endpoint_is_reachable_from_this_sdk() {
     );
     assert_eq!(
         PYTHON_ENDPOINTS.len(),
-        35,
-        "the pinned list should still be the 35 the grep produced"
+        37,
+        "the pinned list should still be the 37 the grep produced"
     );
 }
 

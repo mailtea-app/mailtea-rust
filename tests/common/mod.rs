@@ -147,6 +147,32 @@ fn object(kind: &str, id: &str) -> Value {
     json!({ "object": kind, "id": id })
 }
 
+/// A domain claim in the shape `apps/api/src/domain-claims-rest.ts` returns:
+/// the TXT record to publish lives in `records`, never in a bare `txt` field.
+fn domain_claim(id: &str, status: &str, domain_id: Option<&str>) -> Value {
+    let completed = status == "completed";
+    json!({
+        "object": "domain_claim",
+        "id": id,
+        "publication_id": "pub_1",
+        "name": "acme.com",
+        "region": "eu-west-1",
+        "status": status,
+        "records": [{
+            "record": "Claim",
+            "type": "TXT",
+            "name": "_mailtea-claim.acme.com",
+            "value": format!("mailtea-claim={id}"),
+            "status": if completed { "verified" } else { "pending" }
+        }],
+        "failure_reason": Value::Null,
+        "domain_id": domain_id,
+        "created_at": "2026-09-01T00:00:00.000Z",
+        "expires_at": if completed { Value::Null } else { json!("2026-09-08T00:00:00.000Z") },
+        "completed_at": if completed { json!("2026-09-01T00:10:00.000Z") } else { Value::Null }
+    })
+}
+
 /// The route table. Specific paths come before the `:id` ones, because match
 /// arms are tried in order.
 fn route(request: &RecordedRequest) -> (u16, Value) {
@@ -354,6 +380,21 @@ fn route(request: &RecordedRequest) -> (u16, Value) {
         ("POST", ["v1", "templates", _id, "duplicate"]) => (200, object("template", "tpl_2")),
 
         // ---- domains ------------------------------------------------------
+        // Claims come first: `/v1/domains/claim` is a fixed path, and
+        // `/v1/domains/claims/:id` sits a level deeper than `/v1/domains/:id`.
+        ("POST", ["v1", "domains", "claim"]) => (200, domain_claim("clm_1", "pending", None)),
+        ("GET", ["v1", "domains", "claims", id]) => (200, domain_claim(id, "pending", None)),
+        ("DELETE", ["v1", "domains", "claims", id]) => (
+            200,
+            json!({ "object": "domain_claim", "id": id, "deleted": true }),
+        ),
+        // Verify answers with the claim AND the domain it produced, so the
+        // claimant can publish its DNS without a second request.
+        ("POST", ["v1", "domains", "claims", id, "verify"]) => {
+            let mut claim = domain_claim(id, "completed", Some("dom_2"));
+            claim["domain"] = json!({ "object": "domain", "id": "dom_2", "records": [] });
+            (200, claim)
+        }
         ("POST", ["v1", "domains"]) => (
             200,
             json!({ "object": "domain", "id": "dom_1", "records": [] }),
