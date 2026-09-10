@@ -2,7 +2,7 @@
 name = "mailtea"
 # The one place the version lives. `scripts/sync-oss-repos.sh` reads it from
 # here to tag the mirror, and `mailtea::VERSION` reads it via CARGO_PKG_VERSION.
-version = "0.2.0"
+version = "0.3.0"
 edition = "2021"
 rust-version = "1.75"
 description = "The official Rust SDK for Mailtea — send, schedule, and manage email from your app or AI agent."

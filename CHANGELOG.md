@@ -2,7 +2,7 @@
 
 All notable changes to the `mailtea` Rust crate are documented here.
 
-## Unreleased
+## 0.3.0 (2026-09-10)
 
 - Added: `domains.update` with `"tracking_subdomain": null` removes a tracking
   subdomain. The domain's links go back to being served from the Mailtea host.
