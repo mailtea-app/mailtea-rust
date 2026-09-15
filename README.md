@@ -134,7 +134,7 @@ a type of yours.
 | `emails.send_idempotent(email, key)` | The same send with an `Idempotency-Key`, so a retry cannot deliver twice |
 | `emails.batch(emails)` | Send up to 100 emails → `BatchSent { data }` |
 | `emails.get(id)` | Retrieve an email and its delivery status → `Email` |
-| `emails.list(params)` | List emails → `{"data", "total", "limit", "offset", "has_more"}` |
+| `emails.list(params)` | List emails → `{"data", "total", "limit", "offset", "has_more"}`. Pass `"mode": "test"` for test-mode mail |
 | `emails.update(id, params)` | Update a scheduled email (currently only `scheduled_at`) |
 | `emails.reschedule(id, scheduled_at)` | Convenience wrapper over `update` |
 | `emails.cancel(id)` | Cancel a scheduled email (`POST /v1/emails/:id/cancel`) |
@@ -163,7 +163,7 @@ a type of yours.
 | `domains.tracking.create / list / verify / delete` | Manage CNAME tracking sub-domains under a domain |
 | `webhooks.create / list / get / update / delete` | Manage outbound event subscriptions |
 | `contact_properties.create / list / update / delete` | Manage custom contact fields (team-scoped) |
-| `api_keys.create / list / revoke` | Manage API keys (`settings:write`) |
+| `api_keys.create / list / revoke` | Manage API keys (`settings:write`). `"mode": "test"` mints a test key |
 | `automations.create / list / get / update / delete` | Manage automation graphs (`steps` + optional `connections`) |
 | `automations.validate(params)` | Dry-run a graph → `{"valid", "issues"}` |
 | `automations.activate / pause / archive` | Lifecycle (`cancel_runs` defaults **false** on pause, **true** on archive) |
@@ -203,6 +203,40 @@ mailtea.emails.send(
         ),
 ).await?;
 ```
+
+## Test mode
+
+A test key (`mt_test_…`) sends nothing. Every message it creates is validated,
+recorded and emits webhooks, but is never handed to a provider — so CI can point
+at production Mailtea with your real code and your real webhook handler.
+
+```rust
+let key = mailtea
+    .api_keys
+    .create(serde_json::json!({ "name": "CI", "mode": "test" }))
+    .await?;
+// key["token"] starts with mt_test_
+
+let test = Mailtea::new(key["token"].as_str().unwrap())?;
+test.emails
+    .send(serde_json::json!({
+        "from": "you@yourdomain.com",
+        "to": "bounced@test.mailtea.email",
+        "subject": "Bounce handling",
+        "html": "<p>Never delivered.</p>"
+    }))
+    .await?;
+
+let page = test.emails.list(serde_json::json!({ "mode": "test" })).await?;
+```
+
+Reserved recipients on `test.mailtea.email` force the outcome — `delivered@`,
+`bounced@`, `complained@`, `delayed@`, `failed@` — and the first `to` recipient
+decides. `Email::mode` reports which mode a row was written in. A test key reads
+only test mail and a live key only live mail; there is no mixed view.
+
+A test key is **not** a data sandbox. It reads and writes your real contacts,
+templates, senders and webhooks. Only delivery is simulated.
 
 ## Webhooks
 

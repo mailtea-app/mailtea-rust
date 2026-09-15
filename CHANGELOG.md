@@ -2,6 +2,22 @@
 
 All notable changes to the `mailtea` Rust crate are documented here.
 
+## 0.4.0 (2026-09-15)
+
+- Added: `Email::mode` — `Some("live")` for real mail, `Some("test")` for a
+  message sent with a test key (`mt_test_…`), which is validated, recorded and
+  webhook-emitting but never delivered. It was already arriving and landing in
+  the `#[serde(flatten)] extra` map; this moves it somewhere discoverable. A
+  `String` rather than an enum, for the same reason `last_event` is one.
+- Added: test mode is reachable through the existing free-form params.
+  `api_keys.create(json!({"name": "CI", "mode": "test"}))` mints a test key, and
+  `emails.list(json!({"mode": "test"}))` reads test mail. There is no mixed
+  view, and a test key is **not** a data sandbox — it reads and writes your real
+  contacts, templates, senders and webhooks. Only delivery is simulated.
+- Reserved recipients on `test.mailtea.email` force an outcome: `delivered@`,
+  `bounced@`, `complained@`, `delayed@`, `failed@`. The first `to` recipient
+  decides; anything else is delivered.
+
 ## 0.3.0 (2026-09-10)
 
 - Added: `domains.update` with `"tracking_subdomain": null` removes a tracking

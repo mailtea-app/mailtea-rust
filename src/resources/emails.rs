@@ -463,6 +463,13 @@ pub struct Email {
     /// API does not send one.
     #[serde(default)]
     pub status: Option<String>,
+    /// `live` for real mail, or `test` for a message sent with a test key
+    /// (`mt_test_…`): validated, recorded and webhook-emitting, but never
+    /// delivered. A `String` rather than an enum, for the same reason
+    /// `last_event` is one — a mode added server-side must not stop this from
+    /// deserializing.
+    #[serde(default)]
+    pub mode: Option<String>,
     #[serde(default)]
     pub created_at: Option<String>,
     #[serde(default)]
