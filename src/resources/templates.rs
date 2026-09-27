@@ -84,6 +84,14 @@ impl Templates {
     /// `global_css`, `category`, `preview_image_url`, `tags`, `text`,
     /// `subject`, `from` and `reply_to` accept `null` to clear them.
     /// `publication_id` is required and is sent as a query parameter.
+    ///
+    /// Editing a published template no longer unpublishes it: the change is
+    /// saved as the working copy, the template keeps its published status,
+    /// and the published version keeps sending until
+    /// [`publish`](Self::publish) is called again. The reply's `unpublished`
+    /// is kept for compatibility and is always `false` now; check
+    /// `has_unpublished_versions` on the reply instead (it also carries
+    /// `message` when that is `true`).
     pub async fn update(&self, id: &str, params: impl Serialize) -> Result<Value> {
         let payload = crate::params::to_value(params)?;
         self.inner
@@ -117,7 +125,11 @@ impl Templates {
 
     /// `POST /v1/templates/:id/unpublish` — return a published template to
     /// draft. `published_at` is kept: it records that the template was published
-    /// once, not that it still is. Requires `publication_id`.
+    /// once, not that it still is. This is now the only way to stop a
+    /// published template sending, short of deleting it (editing or
+    /// restoring it no longer does that on its own). It also drops the
+    /// published version, so the next [`publish`](Self::publish) starts from
+    /// the current (working) content. Requires `publication_id`.
     pub async fn unpublish(&self, id: &str, params: impl Serialize) -> Result<Value> {
         self.inner
             .call(
@@ -135,10 +147,15 @@ impl Templates {
     /// `GET /v1/templates/:id/versions` — the design history, newest first.
     /// Requires `publication_id`; optional `limit`.
     ///
-    /// Entries are metadata only — never the design document, which one entry
-    /// alone can carry half a megabyte of. `is_current` marks the design the
-    /// template is serving right now, which is not always the newest entry: a
-    /// metadata-only update touches the template without recording a version.
+    /// Entries are metadata only. The design document is never included,
+    /// because one entry alone can carry half a megabyte of it. `is_current` marks the entry that
+    /// matches the working copy (the saved design being edited), which is not
+    /// always the newest entry: a metadata-only update touches the template
+    /// without recording a version. `is_published` (a bool) marks the entry
+    /// automations and the API are sending now. They differ while a published
+    /// template has unpublished changes. `is_published` is `false` on every
+    /// entry of a draft, and on every entry of a template published before the
+    /// field existed until it is published again.
     pub async fn versions(&self, id: &str, params: impl Serialize) -> Result<Value> {
         self.inner
             .call(
@@ -156,16 +173,18 @@ impl Templates {
     /// `POST /v1/templates/:id/versions/:version/restore` — put an older design
     /// back onto the template. Requires `publication_id`.
     ///
-    /// **Restoring is a content write, so the template returns to draft** —
-    /// automations and the API stop sending it until [`publish`](Self::publish)
-    /// is called again. The reply's `unpublished` reports whether that just
-    /// happened; re-publishing is the caller's job.
+    /// **Restoring no longer unpublishes the template.** It is a content
+    /// write, and lands in the working copy: a published template keeps its
+    /// published status and keeps sending its published version until
+    /// [`publish`](Self::publish) makes the restored design live. The reply's
+    /// `unpublished` is kept for compatibility and is always `false` now;
+    /// check `has_unpublished_versions` on the returned `template` (or the
+    /// reply's `message`) to see whether the restored design is live yet.
     ///
     /// History is forward-only: the design being replaced is recorded as its own
     /// version first, then the restored design is appended as the new newest
     /// one. Restoring the design that is already current writes nothing and
-    /// returns `restored: false` with `reason: "identical"`, so a no-op restore
-    /// cannot unpublish a live template.
+    /// returns `restored: false` with `reason: "identical"`.
     pub async fn restore_version(
         &self,
         id: &str,

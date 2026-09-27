@@ -99,8 +99,12 @@ impl Automations {
     ///
     /// `validate_only: true` returns an `automation_validation` and writes
     /// nothing. A graph change that carries errors saves anyway while the
-    /// automation is draft/paused/archived; on an `active` one it is a 422 —
-    /// pause, save, then start again.
+    /// automation is draft/paused/archived. On an `active` one it is a 422
+    /// `active_graph_invalid` only when it adds an error the live version does
+    /// not already have; `issues` then lists just those new problems, and
+    /// older ones come back with `pre_existing: true`. Changing an `active`
+    /// automation's trigger is a 422 `trigger_locked_while_active`. Either
+    /// way: pause, save, then start again.
     pub async fn update(&self, id: &str, params: impl Serialize) -> Result<Value> {
         let mut payload = crate::params::to_value(params)?;
         let publication_id = crate::params::take(&mut payload, "publication_id");
@@ -138,7 +142,10 @@ impl Automations {
 
     /// `POST /v1/automations/:id/activate` — start the automation so new
     /// contacts enroll. Requires `publication_id`. A graph with errors is
-    /// refused with 422 `automation_invalid` and the blocking `issues[]`.
+    /// refused with 422 `automation_invalid` and the blocking `issues[]`,
+    /// except an `unknown_step_ref` at a `config.*` path or a trigger
+    /// `missing_branch` that the version it last ran on already had
+    /// (`pre_existing: true`).
     pub async fn activate(&self, id: &str, params: impl Serialize) -> Result<Value> {
         self.inner
             .call(

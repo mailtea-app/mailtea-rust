@@ -367,14 +367,18 @@ fn route(request: &RecordedRequest) -> (u16, Value) {
         ),
         ("GET", ["v1", "templates", _id, "versions"]) => (
             200,
-            json!({ "object": "list", "data": [{ "version": 2, "is_current": true }] }),
+            json!({ "object": "list", "data": [{ "version": 2, "is_current": true, "is_published": false }] }),
         ),
         ("POST", ["v1", "templates", _id, "versions", version, "restore"]) => (
             200,
             json!({
                 "restored": true,
                 "restored_from_version": version.parse::<u32>().unwrap_or(0),
-                "unpublished": true
+                "unpublished": false,
+                "message": format!(
+                    "Restored version {version}. Your changes are saved but not published. Automations and the API keep sending the published version until you publish this template again."
+                ),
+                "template": { "object": "template", "id": _id, "status": "published", "has_unpublished_versions": true }
             }),
         ),
         ("POST", ["v1", "templates", _id, "duplicate"]) => (200, object("template", "tpl_2")),

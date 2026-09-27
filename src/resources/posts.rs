@@ -22,10 +22,17 @@ impl Posts {
     /// `POST /v1/posts` — create a post (a draft by default).
     ///
     /// Seed it from a published server template with `template_id` +
-    /// `variables`, or pass inline `html`. `kind` selects the post type
-    /// (`newsletter` or `broadcast`). Set `send: true` to deliver right after
-    /// creating (or with `scheduled_at` to schedule) — that requires the
-    /// `issues:send` scope.
+    /// `variables`, using the template's PUBLISHED version and not any
+    /// unpublished edits saved since, or pass inline `html`. Renders exactly
+    /// like a send: a declared variable you do not pass gets the template's
+    /// `fallback_value` (or empty), Visual Email Designer `{key}` chips are
+    /// substituted too, supplied values are HTML-escaped (use `{{{key}}}` in
+    /// the template for raw HTML), and undeclared tokens like
+    /// `{{contact.first_name}}` are left for the broadcast send to fill in
+    /// per recipient. `kind` selects the post type (`newsletter` or
+    /// `broadcast`). Set `send: true` to deliver right after creating (or
+    /// with `scheduled_at` to schedule); that requires the `issues:send`
+    /// scope.
     pub async fn create(&self, params: impl Serialize) -> Result<Value> {
         self.inner
             .call("POST", "/v1/posts", crate::params::to_body(params)?)
@@ -128,9 +135,13 @@ pub struct CreatePost {
     pub html: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub text: Option<String>,
-    /// Seed the post from a published server template.
+    /// Seed the post from a published server template's PUBLISHED version
+    /// (not any unpublished edits saved since).
     #[serde(skip_serializing_if = "Option::is_none")]
     pub template_id: Option<String>,
+    /// Substituted into the template's variable placeholders (both `{{key}}`
+    /// and Visual Email Designer `{key}` forms). HTML-escaped; use
+    /// `{{{key}}}` in the template for raw HTML.
     #[serde(skip_serializing_if = "Map::is_empty")]
     pub variables: Map<String, Value>,
     #[serde(skip_serializing_if = "Option::is_none")]

@@ -456,12 +456,15 @@ async fn templates() {
         .expect("unpublish failed");
     assert_eq!(mock.last().path, "/v1/templates/tpl_1/unpublish");
 
-    mailtea
+    let versions = mailtea
         .templates
         .versions("tpl_1", json!({ "publication_id": "pub_1", "limit": 5 }))
         .await
         .expect("versions failed");
     assert_eq!(mock.last().path, "/v1/templates/tpl_1/versions");
+    // The working copy is not what is sending while there are unpublished changes.
+    assert_eq!(versions["data"][0]["is_current"], true);
+    assert_eq!(versions["data"][0]["is_published"], false);
 
     let restored = mailtea
         .templates
@@ -469,8 +472,14 @@ async fn templates() {
         .await
         .expect("restore failed");
     assert_eq!(mock.last().path, "/v1/templates/tpl_1/versions/2/restore");
-    // Restoring is a content write, so the template drops back to draft.
-    assert_eq!(restored["unpublished"], true);
+    // Restoring no longer unpublishes: the template stays published, and
+    // has_unpublished_versions is what says the restore is not live yet.
+    assert_eq!(restored["unpublished"], false);
+    assert_eq!(restored["template"]["has_unpublished_versions"], true);
+    assert!(restored["message"]
+        .as_str()
+        .unwrap_or_default()
+        .contains("saved but not published"));
 
     mailtea
         .templates
