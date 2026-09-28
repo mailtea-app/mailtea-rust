@@ -2,6 +2,17 @@
 
 All notable changes to the `mailtea` Rust crate are documented here.
 
+## Unreleased
+
+- Docs: template history now records the sender. Each entry from the template
+  versions call carries `from`, `reply_to` and `sender_recorded`, an update
+  that changes only the From or Reply-To records a version (or folds into the
+  open one, like any edit), and restoring a version brings its From and
+  Reply-To back with the design. A version with `sender_recorded` false was
+  recorded before this change and leaves the current From and Reply-To alone
+  when restored. The behaviour comes from the API and reaches every SDK
+  version on deploy; only the doc comments change here.
+
 ## 0.5.0 (2026-09-28)
 
 - Breaking: `CreatePost::template_id` seeding now HTML-escapes the `variables`

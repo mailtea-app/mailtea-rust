@@ -148,7 +148,13 @@ impl Templates {
     /// Requires `publication_id`; optional `limit`.
     ///
     /// Entries are metadata only. The design document is never included,
-    /// because one entry alone can carry half a megabyte of it. `is_current` marks the entry that
+    /// because one entry alone can carry half a megabyte of it. `from` and
+    /// `reply_to` are the sender the version holds, and a change to only the
+    /// From or Reply-To records a version (or folds into the open one, like
+    /// any edit). `sender_recorded` says what a
+    /// `null` means: `true`, the version had none and restoring it clears
+    /// them; `false`, the version was recorded before versions kept the
+    /// sender. `is_current` marks the entry that
     /// matches the working copy (the saved design being edited), which is not
     /// always the newest entry: a metadata-only update touches the template
     /// without recording a version. `is_published` (a bool) marks the entry
@@ -171,7 +177,10 @@ impl Templates {
     }
 
     /// `POST /v1/templates/:id/versions/:version/restore` — put an older design
-    /// back onto the template. Requires `publication_id`.
+    /// back onto the template, with the version's From and Reply-To. A version
+    /// with `sender_recorded` `false` (recorded before versions kept the
+    /// sender) leaves the current From and Reply-To as they are. Requires
+    /// `publication_id`.
     ///
     /// **Restoring no longer unpublishes the template.** It is a content
     /// write, and lands in the working copy: a published template keeps its
