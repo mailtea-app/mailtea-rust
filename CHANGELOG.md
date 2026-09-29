@@ -2,7 +2,7 @@
 
 All notable changes to the `mailtea` Rust crate are documented here.
 
-## Unreleased
+## 0.6.0 (2026-09-29)
 
 - Docs: template history now records the sender. Each entry from the template
   versions call carries `from`, `reply_to` and `sender_recorded`, an update
