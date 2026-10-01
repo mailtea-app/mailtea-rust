@@ -2,7 +2,7 @@
 
 All notable changes to the `mailtea` Rust crate are documented here.
 
-## Unreleased
+## 0.7.0 (2026-10-01)
 
 - Docs: a domain claim takes an optional `purpose` (`email`, `site` or
   `both`, default `email`), and the domain the claim produces is created with
