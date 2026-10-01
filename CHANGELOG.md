@@ -2,6 +2,14 @@
 
 All notable changes to the `mailtea` Rust crate are documented here.
 
+## Unreleased
+
+- Docs: a domain claim takes an optional `purpose` (`email`, `site` or
+  `both`, default `email`), and the domain the claim produces is created with
+  that purpose; every claim response carries `purpose`. The parameter passes
+  through the existing claim call; only the doc comments change here. Needs the
+  API deployed with this change.
+
 ## 0.6.0 (2026-09-29)
 
 - Docs: template history now records the sender. Each entry from the template

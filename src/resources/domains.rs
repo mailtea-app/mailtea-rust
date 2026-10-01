@@ -244,9 +244,11 @@ impl DomainClaims {
         Self { inner }
     }
 
-    /// `POST /v1/domains/claim` — open a claim. Takes `publication_id`, `name`
-    /// and an optional `region`; the response `records` lists the TXT record to
-    /// publish.
+    /// `POST /v1/domains/claim`: open a claim. Takes `publication_id`, `name`
+    /// and optional `region` and `purpose` (`email`, `site` or `both`, default
+    /// `email`); the domain the claim produces is created with that purpose.
+    /// The response `records` lists the TXT record to publish, and every claim
+    /// carries `purpose`.
     pub async fn create(&self, params: impl Serialize) -> Result<Value> {
         self.inner
             .call("POST", "/v1/domains/claim", crate::params::to_body(params)?)
