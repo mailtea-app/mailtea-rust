@@ -25,8 +25,9 @@ impl ApiKeys {
     /// store it securely.
     ///
     /// Takes `name`, optional `permission` (`"full_access"`,
-    /// `"sending_access"` or `"drafts_only"`, which writes drafts but can never
-    /// send), and optional `domain_id`.
+    /// `"sending_access"`, `"drafts_only"`, which writes drafts but can never
+    /// send, or `"drafts_and_templates"`, which also builds and publishes
+    /// templates and never sends), and optional `domain_id`.
     pub async fn create(&self, params: impl Serialize) -> Result<Value> {
         self.inner
             .call("POST", "/v1/api-keys", crate::params::to_body(params)?)
